@@ -25,12 +25,13 @@ main(void)
   picinit();       // disable pic
   ioapicinit();    // another interrupt controller
   consoleinit();   // console hardware
+  drvmeminit(); // TP2
   uartinit();      // serial port
   pinit();         // process table
   tvinit();        // trap vectors
   binit();         // buffer cache
   fileinit();      // file table
-  ideinit();       // disk 
+  ideinit();       // disk
   startothers();   // start other processors
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();      // first user process

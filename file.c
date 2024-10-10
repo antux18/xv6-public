@@ -10,6 +10,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "stat.h"
 
 struct devsw devsw[NDEV];
 struct {
@@ -180,7 +181,8 @@ int filelseek(struct file* f, int off, int whence) {
       return -1;
   }
 
-  if (newoff < 0 || newoff > fsize) {
+  //if (newoff < 0 || newoff > fsize) { // TP1
+  if (f->ip->type != T_DEV && (newoff < 0 || newoff > fsize)) { // TP2
     return -1;
   }
   else {

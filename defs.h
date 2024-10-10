@@ -189,3 +189,10 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// TP2
+
+// drvmem.c
+void drvmeminit();
+int drvmemwrite(struct inode *ip, char *dst, uint off, int n);
+int drvmemread(struct inode *ip, char *buf, uint off, int n);
