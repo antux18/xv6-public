@@ -185,6 +185,7 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+	_mknod\
 	_syslogd\
 	_logger\
 

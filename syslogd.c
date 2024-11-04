@@ -56,6 +56,7 @@ main(int argc, char *argv[])
     case 0:
       // on essaye de lire plein d'événements à la fois pour voir
       // si les spécifications sont respectées
+      printf(2, "je lis\n");
       while ((nlus = read (fd, &logev, NBEV * sizeof *logev)) > 0) {
 	if (nlus % sizeof *logev != 0) {
 	  printf(2, "read invalid number %d of bytes from %s\n", nlus, LOGDEVICE);

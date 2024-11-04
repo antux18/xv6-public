@@ -99,7 +99,14 @@ sys_close(void)
   if(argfd(0, &fd, &f) < 0)
     return -1;
   myproc()->ofile[fd] = 0;
+
+  int major = f->ip->major;
   fileclose(f);
+  if (f->ref == 0) {
+    if(major >= 0 || devsw[major].close) {
+      devsw[major].close(f->ip, f);
+    }
+  }
   return 0;
 }
 
@@ -293,6 +300,9 @@ sys_open(void)
   if(argstr(0, &path) < 0 || argint(1, &omode) < 0)
     return -1;
 
+  if(ip->major >= 0 || devsw[ip->major].open)
+    devsw[ip->major].open(ip, omode);
+
   begin_op();
 
   if(omode & O_CREATE){
@@ -329,6 +339,7 @@ sys_open(void)
   f->off = 0;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+
   return fd;
 }
 
@@ -374,7 +385,7 @@ sys_chdir(void)
   char *path;
   struct inode *ip;
   struct proc *curproc = myproc();
-  
+
   begin_op();
   if(argstr(0, &path) < 0 || (ip = namei(path)) == 0){
     end_op();
