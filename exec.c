@@ -38,6 +38,13 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
+  void* vsc_ka;
+  if ((vsc_ka = vsc_alloc(pgdir, 0)) == 0) {
+    goto bad;
+  }
+  *((uint*) vsc_ka) = curproc->pid;
+  *((uint*) vsc_ka + 4) = curproc->parent->pid;
+
   // Load program into memory.
   sz = 0;
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){

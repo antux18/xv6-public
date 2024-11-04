@@ -385,6 +385,21 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+void *vsc_alloc(pde_t *pgdir, int n) {
+  char* ka;
+  if ((ka = kalloc()) == 0) {
+    return 0;
+  }
+  if (mappages(pgdir, (void*) VSCADDR, 4096, (uint) ka, PTE_U) < 0) {
+    return 0;
+  }
+  return ka;
+}
+
+void *vsc_get(pde_t *pgdir, int n) {
+  return uva2ka(pgdir, (char*) VSCADDR);
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
