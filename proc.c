@@ -601,16 +601,13 @@ int ptrace(int req, int pid, int addr) {
 
       case PTRACE_READ:
         return -1;
-        break;
       case PTRACE_WRITE:
         return -1;
-        break;
       case PTRACE_STEP:
         return -1;
-        break;
       case PTRACE_CONT:
-        return -1;
-        break;
+        child->state = RUNNABLE;
+        return 0;
       default:
         return -1;
     }
