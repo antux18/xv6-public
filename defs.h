@@ -121,6 +121,9 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 
+int ptrace(int req, int pid, int addr); // TP Note
+void stop(void);
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 

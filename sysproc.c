@@ -89,3 +89,15 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// TP Note
+int sys_ptrace(void) {
+  int req, pid, addr;
+
+  if (argint(0, &req) || argint(1, &pid) || argint(2, &addr)) {
+    return -1;
+  }
+  else {
+    return ptrace(req, pid, addr);
+  }
+}

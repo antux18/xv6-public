@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "ptrace.h"
 
 struct {
   struct spinlock lock;
@@ -38,10 +39,10 @@ struct cpu*
 mycpu(void)
 {
   int apicid, i;
-  
+
   if(readeflags()&FL_IF)
     panic("mycpu called with interrupts enabled\n");
-  
+
   apicid = lapicid();
   // APIC IDs are not guaranteed to be contiguous. Maybe we should have
   // a reverse map, or reserve a register to store &cpus[i].
@@ -91,6 +92,8 @@ found:
 
   release(&ptable.lock);
 
+  p->traced = 0; // TP Note
+
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
     p->state = UNUSED;
@@ -124,7 +127,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
+
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -199,6 +202,8 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+
+  np->traced = 0; // TP Note
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -275,7 +280,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
+
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -325,7 +330,7 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -418,7 +423,7 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
+
   if(p == 0)
     panic("sleep");
 
@@ -531,4 +536,90 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+// TP Note
+
+int ptrace(int req, int pid, int addr) {
+  struct proc* p = myproc();
+  if (req == PTRACE_TRACE_ME) {
+    p->traced = 1;
+    return 0;
+  }
+  else {
+    uint* data;
+    struct proc* child;
+    for (child = ptable.proc ; child < &ptable.proc[NPROC] && child->pid != pid ; child++);
+    if (child->pid != pid || !child->traced) {
+      return -1;
+    }
+    struct trapframe* tf = child->tf;
+
+    // En attente jusqu'a ce que le fils soit dans la fonction stop :
+    while (child->state != SLEEPING);
+
+    if (p->killed || child->killed || !child->traced) {
+      return -1;
+    }
+
+    switch (req) {
+      case PTRACE_GETREG:
+        if (argptr(3, (char**) &data, sizeof(uint))) {
+          return -1;
+        }
+
+        data[REG_EAX] = tf->eax;
+        data[REG_EBX] = tf->ebx;
+        data[REG_ECX] = tf->ecx;
+        data[REG_EDX] = tf->edx;
+        data[REG_EDI] = tf->edi;
+        data[REG_ESI] = tf->esi;
+        data[REG_EBP] = tf->ebp;
+        data[REG_ESP] = tf->esp;
+        data[REG_EIP] = tf->eip;
+        data[REG_EFLAGS] = tf->eflags;
+
+        return 0;
+
+      case PTRACE_SETREG:
+        if (argptr(3, (char**) &data, sizeof(uint))) {
+          return -1;
+        }
+
+        tf->eax = data[REG_EAX];
+        tf->ebx = data[REG_EBX];
+        tf->ecx = data[REG_ECX];
+        tf->edx = data[REG_EDX];
+        tf->edi = data[REG_EDI];
+        tf->esi = data[REG_ESI];
+        tf->ebp = data[REG_EBP];
+        tf->esp = data[REG_ESP];
+        tf->eip = data[REG_EIP];
+        tf->eflags = data[REG_EFLAGS];
+
+        return 0;
+
+      case PTRACE_READ:
+        return -1;
+        break;
+      case PTRACE_WRITE:
+        return -1;
+        break;
+      case PTRACE_STEP:
+        return -1;
+        break;
+      case PTRACE_CONT:
+        return -1;
+        break;
+      default:
+        return -1;
+    }
+  }
+}
+
+void stop(void) {
+  struct proc* p = myproc();
+  p->state = SLEEPING;
+  while (p->state == SLEEPING);
+  return;
 }

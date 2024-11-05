@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "defs.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -21,6 +22,11 @@ tvinit(void)
 
   for(i = 0; i < 256; i++)
     SETGATE(idt[i], 0, SEG_KCODE<<3, vectors[i], 0);
+
+  // TP Note :
+  SETGATE(idt[T_DEBUG], 1, SEG_KCODE<<3, vectors[T_DEBUG], DPL_USER);
+  SETGATE(idt[T_BRKPT], 1, SEG_KCODE<<3, vectors[T_BRKPT], DPL_USER);
+
   SETGATE(idt[T_SYSCALL], 1, SEG_KCODE<<3, vectors[T_SYSCALL], DPL_USER);
 
   initlock(&tickslock, "time");
@@ -76,6 +82,34 @@ trap(struct trapframe *tf)
     cprintf("cpu%d: spurious interrupt at %x:%x\n",
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
+    break;
+
+  // TP note :
+  case T_DEBUG:
+    if(myproc() == 0 || (tf->cs&3) == 0){
+      cprintf("caught T_DEBUG in kernel mode!\n");
+      panic("trap");
+    }
+    if (!myproc()->traced) {
+      cprintf("current process isn't being traced, terminating...\n");
+      myproc()->killed = 1;
+    }
+    else {
+      stop();
+    }
+    break;
+  case T_BRKPT:
+    if(myproc() == 0 || (tf->cs&3) == 0){
+      cprintf("caught T_BRKPT in kernel mode!\n");
+      panic("trap");
+    }
+    if (!myproc()->traced) {
+      cprintf("current process isn't being traced, terminating...\n");
+      myproc()->killed = 1;
+    }
+    else {
+      stop();
+    }
     break;
 
   //PAGEBREAK: 13
