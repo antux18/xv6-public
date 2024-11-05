@@ -3,6 +3,7 @@
 
 // Eflags register
 #define FL_IF           0x00000200      // Interrupt Enable
+#define FL_TF 0x100 // TP Note
 
 // Control Register flags
 #define CR0_PE          0x00000001      // Protection Enable

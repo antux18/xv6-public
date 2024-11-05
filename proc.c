@@ -604,7 +604,9 @@ int ptrace(int req, int pid, int addr) {
       case PTRACE_WRITE:
         return -1;
       case PTRACE_STEP:
-        return -1;
+        tf->eflags |= FL_TF;
+        child->state = RUNNABLE;
+        return 0;
       case PTRACE_CONT:
         child->state = RUNNABLE;
         return 0;
@@ -618,5 +620,6 @@ void stop(void) {
   struct proc* p = myproc();
   p->state = SLEEPING;
   while (p->state == SLEEPING);
+  p->tf->eflags -= FL_TF;
   return;
 }
